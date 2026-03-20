@@ -48,14 +48,14 @@ jobs:
           ls -la
 
           # ✅ Ensure correct playbook
-          if [ ! -f "playbook.yml" ]; then
-            echo "❌ playbook.yml not found in root!"
+          if [ ! -f "run_docker_app.yml" ]; then
+            echo "❌ run_docker_app.yml not found in root!"
             exit 1
           fi
 
           echo "📦 Running Ansible Playbook..."
 
-          ansible-playbook -i inventory.ini playbook.yml
+          ansible-playbook -i inventory.ini run_docker_app.yml
 
           echo "✅ Deployment Completed Successfully"
 

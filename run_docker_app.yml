@@ -1,0 +1,36 @@
+---
+- name: Run Docker container for encode-decode web app
+  hosts: all
+  become: yes
+
+  vars:
+    image_name: "subhash45/encode-decode-web-app:latest"
+    container_name: "encode_decode_app"
+    app_port: 8080
+
+  tasks:
+
+    - name: Ensure Docker is installed
+      package:
+        name: docker
+        state: present
+
+    - name: Start and enable Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Pull Docker image
+      community.docker.docker_image:
+        name: "{{ image_name }}"
+        source: pull
+
+    - name: Run Docker container
+      community.docker.docker_container:
+        name: "{{ container_name }}"
+        image: "{{ image_name }}"
+        state: started
+        restart_policy: always
+        ports:
+          - "{{ app_port }}:80"
