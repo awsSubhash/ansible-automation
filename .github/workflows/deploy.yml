@@ -1,4 +1,4 @@
-name: Deploy Ansible Playbook
+name: Ansible Deployment
 
 on:
   push:
@@ -10,26 +10,51 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
+    - name: Checkout Code (for workflow only)
       uses: actions/checkout@v3
 
-    - name: Setup SSH Key
+    # Setup SSH Key
+    - name: Setup SSH
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
 
-    - name: Add Ansible Server to Known Hosts
+    # Add host to known_hosts
+    - name: Add Known Hosts
       run: |
         ssh-keyscan -H ${{ secrets.ANSIBLE_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Copy Files to Ansible Server
-      run: |
-        scp -r . ${{ secrets.ANSIBLE_USER }}@${{ secrets.ANSIBLE_HOST }}:/home/${{ secrets.ANSIBLE_USER }}/ansible-project
-
-    - name: Run Ansible Playbook
+    # 🚀 Main Deployment Step
+    - name: Deploy via SSH
       run: |
         ssh ${{ secrets.ANSIBLE_USER }}@${{ secrets.ANSIBLE_HOST }} << 'EOF'
-          cd ansible-project
+
+          echo "🚀 Starting Deployment..."
+
+          # Install required packages (only first time, safe to rerun)
+          sudo dnf install -y git python3 python3-pip
+
+          # Install Ansible if not present
+          if ! command -v ansible >/dev/null 2>&1; then
+            pip3 install --user ansible
+          fi
+
+          # Fix PATH
+          export PATH=$PATH:/home/${USER}/.local/bin
+
+          # Remove old project (clean deployment)
+          rm -rf ~/ansible-project
+
+          # Clone latest code
+          git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git ~/ansible-project
+
+          cd ~/ansible-project
+
+          echo "📦 Running Ansible Playbook..."
+
           ansible-playbook playbook.yml
+
+          echo "✅ Deployment Completed Successfully"
+
         EOF
