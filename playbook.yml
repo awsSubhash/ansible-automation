@@ -1,15 +1,32 @@
-- name: Install and start nginx
-  hosts: web
+---
+- name: Install Docker on Amazon Linux 2023
+  hosts: all
   become: yes
 
   tasks:
-    - name: Install nginx
-      yum:
-        name: nginx
+
+    - name: Install Docker package
+      dnf:
+        name: docker
         state: present
 
-    - name: Start nginx
+    - name: Start and enable Docker
       service:
-        name: nginx
+        name: docker
         state: started
-        enabled: true
+        enabled: yes
+
+    - name: Add user to docker group
+      user:
+        name: ec2-user
+        groups: docker
+        append: yes
+
+    - name: Verify Docker installation
+      command: docker --version
+      register: docker_version
+
+    - name: Show Docker version
+      debug:
+        msg: "{{ docker_version.stdout }}"
+
