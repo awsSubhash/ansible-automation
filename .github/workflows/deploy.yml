@@ -10,32 +10,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code (for workflow only)
+    # Checkout (only for workflow context)
+    - name: Checkout Code
       uses: actions/checkout@v3
 
-    # Setup SSH Key
+    # Setup SSH key
     - name: Setup SSH
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
 
-    # Add host to known_hosts
+    # Add server to known_hosts
     - name: Add Known Hosts
       run: |
         ssh-keyscan -H ${{ secrets.ANSIBLE_HOST }} >> ~/.ssh/known_hosts
 
-    # 🚀 Main Deployment Step
+    # 🚀 Deploy
     - name: Deploy via SSH
       run: |
         ssh ${{ secrets.ANSIBLE_USER }}@${{ secrets.ANSIBLE_HOST }} << 'EOF'
 
           echo "🚀 Starting Deployment..."
 
-          # Install required packages (only first time, safe to rerun)
+          # Install dependencies (safe to rerun)
           sudo dnf install -y git python3 python3-pip
 
-          # Install Ansible if not present
+          # Install Ansible if missing
           if ! command -v ansible >/dev/null 2>&1; then
             pip3 install --user ansible
           fi
@@ -43,17 +44,35 @@ jobs:
           # Fix PATH
           export PATH=$PATH:/home/${USER}/.local/bin
 
-          # Remove old project (clean deployment)
+          # Clean old deployment
           rm -rf ~/ansible-project
 
-          # Clone latest code
-          git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git ~/ansible-project
+          # Clone latest repo
+          git clone https://github.com/awsSubhash/ansible-automation.git
 
           cd ~/ansible-project
 
-          echo "📦 Running Ansible Playbook..."
+          echo "📂 Current directory:"
+          pwd
 
-          ansible-playbook playbook.yml
+          echo "📂 Files in repo:"
+          ls -la
+
+          echo "🔍 Searching for playbook..."
+          
+          # Auto-detect playbook file
+          if [ -f "playbook.yml" ]; then
+            PLAYBOOK="playbook.yml"
+          elif [ -f "site.yml" ]; then
+            PLAYBOOK="site.yml"
+          else
+            echo "❌ No playbook found!"
+            exit 1
+          fi
+
+          echo "📦 Running Ansible Playbook: $PLAYBOOK"
+
+          ansible-playbook $PLAYBOOK
 
           echo "✅ Deployment Completed Successfully"
 
