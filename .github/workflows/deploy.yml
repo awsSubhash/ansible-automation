@@ -10,67 +10,63 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # Checkout (only for workflow context)
     - name: Checkout Code
       uses: actions/checkout@v3
 
-    # Setup SSH key
     - name: Setup SSH
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
 
-    # Add server to known_hosts
     - name: Add Known Hosts
       run: |
         ssh-keyscan -H ${{ secrets.ANSIBLE_HOST }} >> ~/.ssh/known_hosts
 
-    # 🚀 Deploy
     - name: Deploy via SSH
       run: |
         ssh ${{ secrets.ANSIBLE_USER }}@${{ secrets.ANSIBLE_HOST }} << 'EOF'
 
           echo "🚀 Starting Deployment..."
 
-          # Install dependencies (safe to rerun)
+          # Install dependencies
           sudo dnf install -y git python3 python3-pip
 
-          # Install Ansible if missing
+          # Install Ansible if not present
           if ! command -v ansible >/dev/null 2>&1; then
             pip3 install --user ansible
           fi
 
-          # Fix PATH
           export PATH=$PATH:/home/${USER}/.local/bin
 
-          # Clean old deployment
-          rm -rf ~/ansible-project
+          # Clean old repo
+          rm -rf ~/ansible-automation
 
-          # Clone latest repo
-          git clone https://github.com/awsSubhash/ansible-automation.git
+          # Clone repo (IMPORTANT: correct repo name)
+          git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git ~/ansible-automation
 
-          cd ~/ansible-project
+          # Go to correct directory
+          cd ~/ansible-automation
 
-          echo "📂 Current directory:"
+          echo "📂 Root directory:"
           pwd
-
-          echo "📂 Files in repo:"
           ls -la
 
-          echo "🔍 Searching for playbook..."
-          
-          # Auto-detect playbook file
-          if [ -f "playbook.yml" ]; then
-            PLAYBOOK="playbook.yml"
-          elif [ -f "site.yml" ]; then
-            PLAYBOOK="site.yml"
-          else
-            echo "❌ No playbook found!"
+          echo "🔍 Searching for playbook in project..."
+
+          # 🔎 Find playbook anywhere
+          PLAYBOOK=$(find . -name "playbook.yml" -o -name "site.yml" | head -n 1)
+
+          if [ -z "$PLAYBOOK" ]; then
+            echo "❌ No playbook found anywhere in repo!"
+            echo "📂 Full structure:"
+            find .
             exit 1
           fi
 
-          echo "📦 Running Ansible Playbook: $PLAYBOOK"
+          echo "✅ Found playbook at: $PLAYBOOK"
+
+          echo "📦 Running Ansible Playbook..."
 
           ansible-playbook $PLAYBOOK
 
